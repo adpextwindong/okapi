@@ -442,6 +442,51 @@ type Cookie = [Crumb]
 
 type Crumb = (BS.ByteString, BS.ByteString)
 
+-- https://users.cs.northwestern.edu/~jesse/pubs/haskell-session-types/session08.pdf
+-- Prototype for Indexed Monad version with QualifiedDo for added type safety.
+-- TODO minimal prototype to explore custom type error options.
+
+class IxMonad m where
+  (>>>=) :: m i j a -> (a -> m j k b) -> m i k b
+  (>>>)  :: m i j a -> m j k b -> m i k b
+  m >>> k = m >>>= \_ -> k
+  ret :: a -> m i i a
+
+-- IxMonad Indexes
+data MethodLess'
+data PathLess'
+data BodyLess'
+
+type IxMonadOkapi m i j = IxMonad m
+
+ixMethodGET :: IxMonadOkapi m MethodLess' PathLess' => m MethodLess' PathLess' a
+ixMethodGET = undefined
+
+--ixPathParam :: (Web.FromHttpApiData a, IxMonadOkapi m PathLess' BodyLess') => m PathLess' BodyLess' a
+ixPathParam :: IxMonadOkapi m PathLess' BodyLess' => m PathLess' BodyLess' a
+ixPathParam = undefined
+
+data IxOkapiT m i j a
+instance IxMonad (IxOkapiT m) where
+  (>>>) = undefined
+
+testOne :: IxMonad m => m MethodLess' BodyLess' a
+testOne = ixMethodGET >>> ixPathParam
+
+--testTwo = ixMethodGET >>> ixMethodGET
+
+{-
+src/Okapi.hs:476:27: error:
+    • Couldn't match type ‘MethodLess'’ with ‘PathLess'’
+      Expected type: m PathLess' PathLess' b
+        Actual type: m MethodLess' PathLess' b
+    • In the second argument of ‘(>>>)’, namely ‘ixMethodGET’
+      In the expression: ixMethodGET >>> ixMethodGET
+      In an equation for ‘testTwo’: testTwo = ixMethodGET >>> ixMethodGET
+    |
+476 | testTwo = ixMethodGET >>> ixMethodGET
+ -}
+
 -- $parsers
 --
 -- These are the parsers that you'll use to build you own app.
